@@ -18,25 +18,33 @@ class WhatsAppService {
     let normalized = phoneNumber.replace(/\D/g, '');
     
     // Formata números brasileiros corretamente
-    // Verifica se é um número brasileiro:
-    // Se começa com 55 (código do Brasil)
     if (normalized.startsWith('55')) {
-      // Garante que mantenha o 9 após o DDD em números brasileiros
-      // Um número brasileiro completo é 55 + DDD (2 dígitos) + 9 + número (8 dígitos)
-      console.log(`Formatando número brasileiro: ${normalized}`);
-      
-      // Não aplicamos substring para limitar dígitos em números brasileiros
-      // para evitar remover o 9 ou outros dígitos importantes
+      // Número brasileiro completo deve ter 13 dígitos: 55 + DDD (2 dígitos) + 9 + número (8 dígitos)
+      // Verifica se o número está com 12 dígitos (faltando o 9)
+      if (normalized.length === 12) {
+        // Adiciona o dígito 9 após o DDD (posição 4)
+        normalized = normalized.slice(0, 4) + '9' + normalized.slice(4);
+        console.log(`Adicionando dígito 9 após DDD: ${normalized}`);
+      } else {
+        console.log(`Formatando número brasileiro: ${normalized}`);
+      }
       return normalized;
     } 
-    // Para números que não começam com 55, adiciona o código do país se necessário
+    // Para números que não começam com 55, adiciona o código do país
     else if (normalized.length <= 12) {
+      const oldNumber = normalized;
       normalized = '55' + normalized;
-      console.log(`Adicionando código do Brasil: ${normalized}`);
+      
+      // Se o número adicionado do código do país não tem o 9 após DDD, adiciona-o
+      if (normalized.length === 12) {
+        normalized = normalized.slice(0, 4) + '9' + normalized.slice(4);
+      }
+      
+      console.log(`Adicionando código do Brasil: ${oldNumber} -> ${normalized}`);
       return normalized;
     }
     
-    // Para outros números internacionais, limita a 15 dígitos
+    // Para outros números internacionais
     return normalized;
   }
 
@@ -51,6 +59,20 @@ class WhatsAppService {
       const normalizedTo = this.normalizePhoneNumber(to);
       console.log(`Enviando mensagem para número normalizado: ${normalizedTo} (original: ${to})`);
       
+      // Log the request payload for debugging
+      const payload = {
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: normalizedTo,
+        type: 'text',
+        text: {
+          preview_url: false,
+          body: text
+        }
+      };
+      
+      console.log(`📤 Enviando payload para WhatsApp API: ${JSON.stringify(payload)}`);
+      
       const response = await axios({
         method: 'POST',
         url: `${this.baseUrl}/${this.phoneNumberId}/messages`,
@@ -58,17 +80,10 @@ class WhatsAppService {
           'Authorization': `Bearer ${this.token}`,
           'Content-Type': 'application/json'
         },
-        data: {
-          messaging_product: 'whatsapp',
-          recipient_type: 'individual',
-          to: normalizedTo,
-          type: 'text',
-          text: {
-            preview_url: false,
-            body: text
-          }
-        }
+        data: payload
       });
+      
+      console.log(`✅ Resposta da API WhatsApp: ${JSON.stringify(response.data)}`);
       
       return {
         success: true,
@@ -76,7 +91,15 @@ class WhatsAppService {
         messageId: response.data.messages?.[0]?.id
       };
     } catch (error) {
-      console.error('Erro ao enviar mensagem WhatsApp:', error.response?.data || error.message);
+      console.error('❌ Erro ao enviar mensagem WhatsApp:', error.response?.data || error.message);
+      // Detailed error logging
+      if (error.response) {
+        console.error('Detalhes do erro:', {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data
+        });
+      }
       return {
         success: false,
         error: error.response?.data || error.message
@@ -98,6 +121,23 @@ class WhatsAppService {
       const normalizedTo = this.normalizePhoneNumber(to);
       console.log(`Enviando template para: ${normalizedTo}, template: ${templateName}`);
       
+      // Log the request payload for debugging
+      const payload = {
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: normalizedTo,
+        type: 'template',
+        template: {
+          name: templateName,
+          language: {
+            code: language
+          },
+          components: components
+        }
+      };
+      
+      console.log(`📤 Enviando payload de template para WhatsApp API: ${JSON.stringify(payload)}`);
+      
       const response = await axios({
         method: 'POST',
         url: `${this.baseUrl}/${this.phoneNumberId}/messages`,
@@ -105,20 +145,10 @@ class WhatsAppService {
           'Authorization': `Bearer ${this.token}`,
           'Content-Type': 'application/json'
         },
-        data: {
-          messaging_product: 'whatsapp',
-          recipient_type: 'individual',
-          to: normalizedTo,
-          type: 'template',
-          template: {
-            name: templateName,
-            language: {
-              code: language
-            },
-            components: components
-          }
-        }
+        data: payload
       });
+      
+      console.log(`✅ Resposta de template da API WhatsApp: ${JSON.stringify(response.data)}`);
       
       return {
         success: true,
@@ -126,7 +156,15 @@ class WhatsAppService {
         messageId: response.data.messages?.[0]?.id
       };
     } catch (error) {
-      console.error('Erro ao enviar mensagem de template:', error.response?.data || error.message);
+      console.error('❌ Erro ao enviar mensagem de template:', error.response?.data || error.message);
+      // Detailed error logging
+      if (error.response) {
+        console.error('Detalhes do erro de template:', {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data
+        });
+      }
       return {
         success: false,
         error: error.response?.data || error.message

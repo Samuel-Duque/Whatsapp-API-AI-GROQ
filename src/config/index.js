@@ -12,7 +12,7 @@ module.exports = {
   // Configurações da API do Groq
   groq: {
     apiKey: process.env.GROQ_API_KEY,
-    model: process.env.GROQ_MODEL || 'llama3-70b-8192',
+    model: process.env.GROQ_MODEL || 'deepseek-coder',
     maxTokens: parseInt(process.env.GROQ_MAX_TOKENS || '4096', 10),
     temperature: parseFloat(process.env.GROQ_TEMPERATURE || '0.7')
   },

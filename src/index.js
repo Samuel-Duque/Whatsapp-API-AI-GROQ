@@ -57,7 +57,13 @@ app.get('/docs', (req, res) => {
       'POST /api/send-message': 'Envia uma mensagem para um número de WhatsApp',
       'POST /api/clear-history': 'Limpa o histórico de conversa de um usuário',
       'POST /api/send-welcome': 'Envia mensagem de boas-vindas para um usuário',
-      'GET /api/health': 'Verifica o status do serviço'
+      'GET /api/health': 'Verifica o status do serviço',
+      'POST /api/context': 'Adiciona um novo contexto local',
+      'GET /api/context/:id': 'Obtém um contexto específico',
+      'GET /api/contexts': 'Lista todos os contextos disponíveis',
+      'POST /api/contexts/nearby': 'Encontra contextos próximos a uma localização',
+      'POST /api/apply-context': 'Aplica um contexto a uma conversa atual',
+      'DELETE /api/context/:id': 'Remove um contexto'
     }
   });
 });

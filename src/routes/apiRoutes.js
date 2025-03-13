@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const whatsappService = require('../services/whatsappService');
 const conversationService = require('../services/conversationService');
+const contextService = require('../services/contextService');
 
 /**
  * Rota para enviar uma mensagem diretamente para um usuário
@@ -173,6 +174,183 @@ router.get('/health', (req, res) => {
     message: 'Serviço operando normalmente',
     timestamp: new Date().toISOString()
   });
+});
+
+/**
+ * Rota para adicionar um novo contexto local
+ */
+router.post('/context', (req, res) => {
+  try {
+    const { id, contextData } = req.body;
+    
+    if (!id || !contextData) {
+      return res.status(400).json({
+        success: false,
+        error: 'Os campos "id" e "contextData" são obrigatórios'
+      });
+    }
+    
+    // Garante que só dados de Recife sejam adicionados
+    const result = contextService.addContext(id, contextData);
+    
+    return res.status(result ? 200 : 400).json({
+      success: result,
+      message: result 
+        ? 'Contexto adicionado com sucesso' 
+        : 'Não foi possível adicionar o contexto, verifique se a localização está em Recife'
+    });
+  } catch (error) {
+    console.error('Erro ao adicionar contexto:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Rota para obter um contexto específico
+ */
+router.get('/context/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const context = contextService.getContext(id);
+    
+    if (!context) {
+      return res.status(404).json({
+        success: false,
+        error: 'Contexto não encontrado'
+      });
+    }
+    
+    return res.status(200).json({
+      success: true,
+      data: context
+    });
+  } catch (error) {
+    console.error('Erro ao obter contexto:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Rota para listar todos os contextos disponíveis
+ */
+router.get('/contexts', (req, res) => {
+  try {
+    const contexts = contextService.listAllContexts();
+    
+    return res.status(200).json({
+      success: true,
+      count: contexts.length,
+      data: contexts
+    });
+  } catch (error) {
+    console.error('Erro ao listar contextos:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Rota para encontrar contextos próximos a uma localização
+ */
+router.post('/contexts/nearby', (req, res) => {
+  try {
+    const { latitude, longitude, radius } = req.body;
+    
+    if (!latitude || !longitude) {
+      return res.status(400).json({
+        success: false,
+        error: 'Os campos "latitude" e "longitude" são obrigatórios'
+      });
+    }
+    
+    const location = { latitude: parseFloat(latitude), longitude: parseFloat(longitude) };
+    const searchRadius = radius ? parseInt(radius) : 500; // raio padrão: 500m
+    
+    const nearbyContexts = contextService.findContextsByLocation(location, searchRadius);
+    
+    return res.status(200).json({
+      success: true,
+      count: nearbyContexts.length,
+      data: nearbyContexts
+    });
+  } catch (error) {
+    console.error('Erro ao buscar contextos próximos:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Rota para aplicar contexto a uma conversa atual
+ * Isso permite que o contexto local seja injetado na conversa
+ */
+router.post('/apply-context', (req, res) => {
+  try {
+    const { userId, contextId } = req.body;
+    
+    if (!userId || !contextId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Os campos "userId" e "contextId" são obrigatórios'
+      });
+    }
+    
+    // Obtém o contexto
+    const context = contextService.getContext(contextId);
+    if (!context) {
+      return res.status(404).json({
+        success: false,
+        error: 'Contexto não encontrado'
+      });
+    }
+    
+    // Adiciona o contexto à conversa como uma mensagem de sistema
+    conversationService.addSystemContext(userId, context);
+    
+    return res.status(200).json({
+      success: true,
+      message: `Contexto "${context.name}" aplicado à conversa com sucesso`
+    });
+  } catch (error) {
+    console.error('Erro ao aplicar contexto:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Rota para remover um contexto
+ */
+router.delete('/context/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = contextService.removeContext(id);
+    
+    return res.status(result ? 200 : 404).json({
+      success: result,
+      message: result 
+        ? 'Contexto removido com sucesso' 
+        : 'Contexto não encontrado'
+    });
+  } catch (error) {
+    console.error('Erro ao remover contexto:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
 });
 
 module.exports = router; 

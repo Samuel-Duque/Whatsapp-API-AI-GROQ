@@ -54,11 +54,50 @@ Estamos aqui para tornar sua experiência na cidade mais rica e conectada! 🌆`
     const history = this.getConversationHistory(userId);
     history.push(message);
     
-    // Limitar histórico para as últimas 20 mensagens para evitar consumo excessivo de tokens
-    const limitedHistory = history.slice(-20);
+    // Limitar histórico para evitar consumo excessivo de tokens
+    const limitedHistory = history.slice(-this.maxMessages);
     
     this.conversationCache.set(userId, limitedHistory);
     return limitedHistory;
+  }
+
+  /**
+   * Adiciona um contexto de sistema à conversa
+   * @param {string} userId - ID único do usuário
+   * @param {Object} context - Dados do contexto
+   * @returns {Array} - Histórico atualizado
+   */
+  addSystemContext(userId, context) {
+    // Preparar mensagem de sistema com o contexto
+    const contextMessage = {
+      role: 'system',
+      content: `
+Informações sobre o local atual do usuário em Recife:
+Nome: ${context.name}
+Descrição: ${context.description}
+${context.info ? `Detalhes: ${context.info}` : ''}
+${context.services ? `Serviços disponíveis: ${context.services.join(', ')}` : ''}
+${context.events ? `Eventos: ${context.events}` : ''}
+${context.history ? `História: ${context.history}` : ''}
+${context.operatingHours ? `Horário de funcionamento: ${context.operatingHours}` : ''}
+
+Instruções: Utilize essas informações para fornecer dados precisos e relevantes sobre este local em Recife quando o usuário fizer perguntas relacionadas. Foque suas respostas apenas em informações reais e verificáveis da cidade do Recife. Não forneça informações sobre outras cidades ou invente dados fictícios.
+      `.trim()
+    };
+    
+    // Obter histórico atual
+    const history = this.getConversationHistory(userId);
+    
+    // Remover qualquer contexto de sistema anterior
+    const filteredHistory = history.filter(msg => msg.role !== 'system');
+    
+    // Adicionar novo contexto no início do histórico
+    filteredHistory.unshift(contextMessage);
+    
+    // Salvar histórico atualizado
+    this.conversationCache.set(userId, filteredHistory);
+    
+    return filteredHistory;
   }
 
   /**
@@ -73,8 +112,20 @@ Estamos aqui para tornar sua experiência na cidade mais rica e conectada! 🌆`
       
       console.log(`📥 Processando mensagem de ${userId}: "${messageText}"`);
       
+      // Verificar se é a primeira mensagem do usuário
+      const history = this.getConversationHistory(userId);
+      const isFirstMessage = history.length === 0;
+      
+      // Se for a primeira mensagem, enviar boas-vindas
+      if (isFirstMessage) {
+        console.log(`👋 Primeira mensagem detectada de ${userId}, enviando boas-vindas...`);
+        await this.sendWelcomeMessage(userId);
+        // Pequeno delay para garantir que a mensagem de boas-vindas seja processada primeiro
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      
       // Adicionar mensagem do usuário ao histórico
-      const history = this.addToConversationHistory(userId, {
+      this.addToConversationHistory(userId, {
         role: 'user',
         content: messageText
       });

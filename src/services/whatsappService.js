@@ -17,14 +17,27 @@ class WhatsAppService {
     // Remove qualquer caractere não numérico
     let normalized = phoneNumber.replace(/\D/g, '');
     
-    // Se começar com '+', pode ter sido removido, então não fazemos nada adicional
-    // Se não tiver o código do país (assumindo Brasil - 55), adicione-o
-    if (normalized.length <= 12 && !normalized.startsWith('55')) {
+    // Formata números brasileiros corretamente
+    // Verifica se é um número brasileiro:
+    // Se começa com 55 (código do Brasil)
+    if (normalized.startsWith('55')) {
+      // Garante que mantenha o 9 após o DDD em números brasileiros
+      // Um número brasileiro completo é 55 + DDD (2 dígitos) + 9 + número (8 dígitos)
+      console.log(`Formatando número brasileiro: ${normalized}`);
+      
+      // Não aplicamos substring para limitar dígitos em números brasileiros
+      // para evitar remover o 9 ou outros dígitos importantes
+      return normalized;
+    } 
+    // Para números que não começam com 55, adiciona o código do país se necessário
+    else if (normalized.length <= 12) {
       normalized = '55' + normalized;
+      console.log(`Adicionando código do Brasil: ${normalized}`);
+      return normalized;
     }
     
-    // Limitamos a 15 dígitos conforme padrão internacional
-    return normalized.substring(0, 15);
+    // Para outros números internacionais, limita a 15 dígitos
+    return normalized;
   }
 
   /**

@@ -10,7 +10,7 @@ setupGlobalErrorHandlers();
 
 // Inicializar aplicação Express
 const app = express();
-const port = config.server.port;
+const port = process.env.PORT || config.server.port || 3000;
 
 // Middlewares
 app.use(bodyParser.json());

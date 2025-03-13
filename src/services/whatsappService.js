@@ -9,6 +9,25 @@ class WhatsAppService {
   }
 
   /**
+   * Normaliza um número de telefone para o formato esperado pelo WhatsApp
+   * @param {string} phoneNumber - Número de telefone a ser normalizado
+   * @returns {string} - Número normalizado
+   */
+  normalizePhoneNumber(phoneNumber) {
+    // Remove qualquer caractere não numérico
+    let normalized = phoneNumber.replace(/\D/g, '');
+    
+    // Se começar com '+', pode ter sido removido, então não fazemos nada adicional
+    // Se não tiver o código do país (assumindo Brasil - 55), adicione-o
+    if (normalized.length <= 12 && !normalized.startsWith('55')) {
+      normalized = '55' + normalized;
+    }
+    
+    // Limitamos a 15 dígitos conforme padrão internacional
+    return normalized.substring(0, 15);
+  }
+
+  /**
    * Envia uma mensagem de texto para um número do WhatsApp
    * @param {string} to - Número de telefone de destino no formato internacional (ex: 5511999998888)
    * @param {string} text - Texto da mensagem
@@ -16,6 +35,9 @@ class WhatsAppService {
    */
   async sendTextMessage(to, text) {
     try {
+      const normalizedTo = this.normalizePhoneNumber(to);
+      console.log(`Enviando mensagem para número normalizado: ${normalizedTo} (original: ${to})`);
+      
       const response = await axios({
         method: 'POST',
         url: `${this.baseUrl}/${this.phoneNumberId}/messages`,
@@ -26,7 +48,7 @@ class WhatsAppService {
         data: {
           messaging_product: 'whatsapp',
           recipient_type: 'individual',
-          to,
+          to: normalizedTo,
           type: 'text',
           text: {
             preview_url: false,
@@ -85,8 +107,12 @@ class WhatsAppService {
           
           for (const message of messageList) {
             if (message.type === 'text') {
+              const originalFrom = message.from;
+              const normalizedFrom = this.normalizePhoneNumber(originalFrom);
+              console.log(`Número original: ${originalFrom}, Normalizado: ${normalizedFrom}`);
+              
               messages.push({
-                from: message.from,
+                from: normalizedFrom,
                 id: message.id,
                 timestamp: message.timestamp,
                 text: message.text.body,

@@ -30,6 +30,7 @@ router.get('/', (req, res) => {
  */
 router.post('/', async (req, res) => {
   try {
+    console.log('📱 WEBHOOK RECEBIDO:', JSON.stringify(req.body, null, 2));
     // Responder rapidamente para evitar timeouts do webhook
     res.status(200).send('OK');
     

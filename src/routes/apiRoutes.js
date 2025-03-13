@@ -8,7 +8,7 @@ const conversationService = require('../services/conversationService');
  */
 router.post('/send-message', async (req, res) => {
   try {
-    const { to, message } = req.body;
+    const { to, message, useFallback = true } = req.body;
     
     if (!to || !message) {
       return res.status(400).json({
@@ -17,11 +17,91 @@ router.post('/send-message', async (req, res) => {
       });
     }
     
-    const result = await whatsappService.sendTextMessage(to, message);
+    // Use o método com fallback se solicitado, senão use o método normal
+    const result = useFallback 
+      ? await whatsappService.sendMessageWithFallback(to, message) 
+      : await whatsappService.sendTextMessage(to, message);
     
     return res.status(result.success ? 200 : 500).json(result);
   } catch (error) {
     console.error('Erro ao enviar mensagem via API:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Rota para enviar uma mensagem de template (para iniciar conversas após 24h)
+ */
+router.post('/send-template', async (req, res) => {
+  try {
+    const { to, templateName, language = 'pt_BR', components = [] } = req.body;
+    
+    if (!to || !templateName) {
+      return res.status(400).json({
+        success: false,
+        error: 'Os campos "to" e "templateName" são obrigatórios'
+      });
+    }
+    
+    const result = await whatsappService.sendTemplateMessage(
+      to, 
+      templateName, 
+      language, 
+      components
+    );
+    
+    return res.status(result.success ? 200 : 500).json(result);
+  } catch (error) {
+    console.error('Erro ao enviar template via API:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Rota para iniciar uma conversa usando template e depois continuar com IA
+ */
+router.post('/start-conversation', async (req, res) => {
+  try {
+    const { userId, templateName, language = 'pt_BR', components = [] } = req.body;
+    
+    if (!userId || !templateName) {
+      return res.status(400).json({
+        success: false,
+        error: 'Os campos "userId" e "templateName" são obrigatórios'
+      });
+    }
+    
+    // Envia o template
+    const result = await whatsappService.sendTemplateMessage(
+      userId, 
+      templateName, 
+      language, 
+      components
+    );
+    
+    if (!result.success) {
+      return res.status(500).json(result);
+    }
+    
+    // Adiciona ao histórico se for bem-sucedido
+    conversationService.addToConversationHistory(userId, {
+      role: 'assistant',
+      content: 'Mensagem de template enviada: ' + templateName
+    });
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Conversa iniciada com sucesso',
+      data: result.data
+    });
+  } catch (error) {
+    console.error('Erro ao iniciar conversa:', error);
     return res.status(500).json({
       success: false,
       error: error.message

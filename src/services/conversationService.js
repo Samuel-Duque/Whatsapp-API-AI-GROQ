@@ -9,6 +9,9 @@ class ConversationService {
     
     // Mensagem de boas-vindas
     this.welcomeMessage = 'Olá! Sou uma IA assistente. Como posso ajudar você hoje?';
+    
+    // Template padrão para casos de expiração da janela de 24 horas
+    this.defaultTemplate = 'hello_world';
   }
 
   /**
@@ -46,6 +49,8 @@ class ConversationService {
       const userId = message.from;
       const messageText = message.text;
       
+      console.log(`📥 Processando mensagem de ${userId}: "${messageText}"`);
+      
       // Adicionar mensagem do usuário ao histórico
       const history = this.addToConversationHistory(userId, {
         role: 'user',
@@ -59,11 +64,17 @@ class ConversationService {
         throw new Error(`Falha ao obter resposta da IA: ${aiResponse.error}`);
       }
       
+      console.log(`🤖 Resposta da IA: "${aiResponse.message}"`);
+      
       // Adicionar resposta da IA ao histórico
       this.addToConversationHistory(userId, aiResponse.aiMessage);
       
-      // Enviar resposta para o WhatsApp
-      const result = await whatsappService.sendTextMessage(userId, aiResponse.message);
+      // Enviar resposta para o WhatsApp com fallback para template
+      const result = await whatsappService.sendMessageWithFallback(
+        userId, 
+        aiResponse.message,
+        this.defaultTemplate
+      );
       
       if (!result.success) {
         throw new Error(`Falha ao enviar mensagem para o WhatsApp: ${result.error}`);
@@ -79,9 +90,10 @@ class ConversationService {
       
       // Tentar enviar mensagem de erro para o usuário
       try {
-        await whatsappService.sendTextMessage(
+        await whatsappService.sendMessageWithFallback(
           message.from,
-          'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente mais tarde.'
+          'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente mais tarde.',
+          this.defaultTemplate
         );
       } catch (sendError) {
         console.error('Erro ao enviar mensagem de erro:', sendError);
@@ -100,7 +112,12 @@ class ConversationService {
    */
   async sendWelcomeMessage(userId) {
     try {
-      const result = await whatsappService.sendTextMessage(userId, this.welcomeMessage);
+      // Tenta enviar como mensagem normal com fallback para template
+      const result = await whatsappService.sendMessageWithFallback(
+        userId, 
+        this.welcomeMessage,
+        this.defaultTemplate
+      );
       
       if (result.success) {
         // Adicionar mensagem ao histórico

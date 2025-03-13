@@ -78,7 +78,26 @@ npm run dev
   ```json
   {
     "to": "5511999998888",
-    "message": "Olá! Como posso ajudar?"
+    "message": "Olá! Como posso ajudar?",
+    "useFallback": true
+  }
+  ```
+
+- `POST /api/send-template` - Envia uma mensagem de template (para iniciar conversas após 24h)
+  ```json
+  {
+    "to": "5511999998888",
+    "templateName": "hello_world",
+    "language": "pt_BR"
+  }
+  ```
+
+- `POST /api/start-conversation` - Inicia uma conversa usando template
+  ```json
+  {
+    "userId": "5511999998888",
+    "templateName": "hello_world",
+    "language": "pt_BR"
   }
   ```
 
@@ -97,6 +116,27 @@ npm run dev
   ```
 
 - `GET /api/health` - Verifica o status do serviço
+
+## 🔄 Limitação do WhatsApp e Templates
+
+### Limite de 24 Horas
+O WhatsApp Business API impõe uma restrição importante: você só pode enviar mensagens para um usuário dentro de uma janela de 24 horas após a última mensagem que ele enviar. Após isso, você precisa usar mensagens de template para reiniciar a conversa.
+
+### Configuração de Templates
+Para usar esta integração corretamente:
+
+1. Acesse o [Meta Business Manager](https://business.facebook.com/)
+2. Vá para **WhatsApp Business** > **Templates de Mensagem**
+3. Crie pelo menos um template básico (ex: "hello_world")
+4. Defina o conteúdo do template (ex: "Olá! Como posso ajudar você hoje?")
+5. Envie para aprovação e aguarde
+6. Use o template aprovado através do endpoint `/api/send-template`
+
+### Fallback Automático
+Esta implementação inclui:
+- Detecção automática de erros de limite de 24h
+- Fallback para template quando necessário 
+- Customização do template padrão através da propriedade `defaultTemplate` no serviço de conversação
 
 ## 🔒 Segurança
 

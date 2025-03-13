@@ -5,13 +5,35 @@ const groqService = require('./groqService');
 class ConversationService {
   constructor() {
     // Cache para armazenar históricos de conversa (TTL em segundos: 30 minutos)
-    this.conversationCache = new NodeCache({ stdTTL: 1800, checkperiod: 120 });
+    this.conversationCache = new NodeCache({ stdTTL: 3600, checkperiod: 600 });
+    this.maxMessages = 10;
     
-    // Mensagem de boas-vindas
-    this.welcomeMessage = 'Olá! Sou uma IA assistente. Como posso ajudar você hoje?';
+    // Mensagem de boas-vindas para novos usuários
+    this.welcomeMessage = `✨ *Bem-vindo ao InfoCidadão* ✨
+
+🏙️ Sua ponte digital com a cidade do Recife! Estamos entusiasmados em tê-lo conosco nesta jornada de cidadania ativa e informada.
+
+🧭 *O que fazemos:*
+Fornecemos informações em tempo real sobre locais específicos da nossa cidade. Ao chegar em pontos de interesse, você receberá automaticamente dados relevantes sobre o local, serviços disponíveis, história e eventos.
+
+🔔 *Recursos principais:*
+• Notificações baseadas em localização
+• Informações sobre serviços públicos próximos
+• Dados históricos e culturais dos espaços
+• Eventos e atividades na sua região
+• Canais diretos para serviços municipais
+
+🤝 Esta é uma iniciativa da Prefeitura do Recife em parceria com a tecnologia para construir uma cidade mais conectada e cidadãos mais informados.
+
+💡 *Como começar:* Compartilhe sua localização ou digite o nome do local sobre o qual deseja obter informações.
+
+Estamos aqui para tornar sua experiência na cidade mais rica e conectada! 🌆`;
     
-    // Template padrão para casos de expiração da janela de 24 horas
+    // Template padrão para fallback (usado quando necessário iniciar conversas após 24h)
     this.defaultTemplate = 'hello_world';
+    
+    // Serviço de IA Groq para processamento de linguagem natural
+    this.groqService = groqService;
   }
 
   /**
